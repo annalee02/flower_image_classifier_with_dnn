@@ -13,11 +13,11 @@ def build_network(arch, lr, hidden_units): #####################################
     if arch == 'vgg11':
         model = models.vgg11(pretrained=True)
         print("Model: vgg11")
-    elif arch == 'vgg16':
-        model = models.vgg16(pretrained=True)
-        print("Model: vgg16")
+    elif arch == 'alexnet':
+        model = models.alexnet(pretrained = True)
+        print("Model: alexnet")
     else:
-        print("Only vgg11 and vgg16 are valid to run this application. The default model, vgg11 is running now.")
+        print("Only vgg11 and alexnet are valid to run this application. The default model, vgg11 is running now.")
         model = models.vgg11(pretrained=True)
     # Freeze parameters
     for param in model.parameters(): 
@@ -30,7 +30,9 @@ def build_network(arch, lr, hidden_units): #####################################
     classifier = nn.Sequential(OrderedDict([('fc1', nn.Linear(num_features, hidden_units)),
                                             ('relu', nn.ReLU()),
                                             ('dropout', nn.Dropout(p=0.5)),
-                                            ('hidden', nn.Linear(hidden_units, 100)),                       
+                                            ('hidden', nn.Linear(hidden_units, 100)),
+                                            ('relu', nn.ReLU()),
+                                            ('dropout', nn.Dropout(p=0.5)),
                                             ('fc2', nn.Linear(100, 102)),
                                             ('output', nn.LogSoftmax(dim=1))]))
     model.classifier = classifier
@@ -110,18 +112,32 @@ def save_checkpoint(filepath, arch, epochs, hidden_units, train_data, optimizer,
     print("checkpoint.pth is saved.")
     
 # Write a function that loads a checkpoint and rebuilds the model
-def load_checkpoint(filepath): ##############################################################
+def load_checkpoint(filepath):###############################################################
     checkpoint = torch.load(filepath)
+    if checkpoint['arch'] == 'alexnet':
+        model = models.alexnet(pretrained = True)
+    else:
+        model = models.vgg11(pretrained =True)
+        
     arch = checkpoint['arch']
-    epoch = checkpoint['epoch']
+    #epoch = checkpoint['epoch']
     hidden_units = checkpoint['hidden_units']
     
-    model,_,_ = build_network(arch, 0.001, hidden_units)
+    num_features = model.classifier[0].in_features
+    classifier = nn.Sequential(OrderedDict([('fc1', nn.Linear(num_features, hidden_units)),
+                                        ('relu', nn.ReLU()),
+                                        ('dropout', nn.Dropout(p=0.5)),
+                                        ('hidden', nn.Linear(hidden_units, 100)),
+                                        ('relu', nn.ReLU()),
+                                        ('dropout', nn.Dropout(p=0.5)),
+                                        ('fc2', nn.Linear(100, 102)),
+                                        ('output', nn.LogSoftmax(dim=1))]))
+    model.classifier = classifier
+    model.optimizer = checkpoint['optimizer']
+    class_to_idx = checkpoint['class_to_idx']
+    model.load_state_dict(checkpoint['state_dict'])
     
-    #model.state_dict(checkpoint['optimizer'])
-    model.class_to_idx = checkpoint['class_to_idx']
-    model.state_dict(checkpoint['state_dict'])
-    return model
+    return model, class_to_idx
 
 
 def predict(img_torch, model, topk, power): ##################################################

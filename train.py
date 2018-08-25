@@ -33,7 +33,6 @@ power = args.gpu
 trainloader, validloader, testloader, train_data = utility.load_data()
 
 model, criterion, optimizer = ai_model.build_network(arch, lr, hidden_units)
-valid_loss, accuracy, optimizer = ai_model.validation(model, validloader, criterion, optimizer)
 
 # Prints out training loss, validation loss, and validation accuracy as the network trains
 ai_model.train_network(model, trainloader, validloader, epochs, 5, criterion, optimizer, power)

@@ -6,6 +6,7 @@ from torch import nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms, models
 from PIL import Image
+import numpy as np
 
 def load_data():#######################################################################
     # Directories
@@ -44,20 +45,38 @@ def load_data():################################################################
     
     return trainloader, validloader, testloader, train_data
 
-def process_image(img_path):##############################################################
+def process_image(image_path):
     ''' Scales, crops, and normalizes a PIL image for a PyTorch model,
         returns an Numpy array
     '''
-    pil_image = Image.open(img_path)
-    
+    image = Image.open(image_path)
+
+    width, height = image.size
+    size = 256, 256
+    if width > height:
+        ratio = float(width) / float(height)
+        newheight = ratio * size[0]
+        image = image.resize((size[0], int(np.floor(newheight))), Image.ANTIALIAS)
+    else:
+        ratio = float(height) / float(width)
+        newwidth = ratio * size[1]
+        image = image.resize((size[1], int(np.floor(newwidth))), Image.ANTIALIAS)
+
+    image = image.crop((
+        # Calculate coordinates
+        size[0] //2 - (224/2),
+        size[1] //2 - (224/2),
+        size[0] //2 + (224/2),
+        size[1] //2 + (224/2)
+    ))
+    # Normalise after that
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
-    # Process a PIL image for use in a PyTorch model
-    image_transforms = transforms.Compose([transforms.Resize(256), # 256 pixels
-                                           transforms.CenterCrop(224), # Crop out the center224x224
-                                           transforms.ToTensor(),
-                                           transforms.Normalize(mean, std)])
     
-    pil_image = image_transforms(pil_image)
+    np_image = np.array(image, dtype=np.float64)
+    np_image = np_image / 255.0
+    np_image = (np_image - mean) / std
+    
+    pil_image = np_image.transpose(2,0,1)
 
-    return pil_image
+    return torch.from_numpy(pil_image)

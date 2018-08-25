@@ -6,6 +6,7 @@ from torchvision import datasets, transforms, models
 from PIL import Image
 import argparse
 import numpy as np
+import json
 
 import utility # utility.py
 import ai_model # ai_model.py
@@ -25,10 +26,9 @@ power = args.gpu
 filepath = args.checkpoint
 
 trainloader, validloader, testloader, train_data = utility.load_data()
-model = ai_model.load_checkpoint(filepath)
+model, class_to_idx = ai_model.load_checkpoint(filepath)
          
 # Label mapping
-import json
 
 with open('cat_to_name.json', 'r') as f:
     cat_to_name = json.load(f)
@@ -39,10 +39,11 @@ result = ai_model.predict(pil_image, model, topk, power)
 probs = F.softmax(result[0].data, dim=1).cpu().numpy()[0]
 classes = result[1].data.cpu().numpy()[0]
 
-    
+
+idx_to_class =  {v : k for k,v in class_to_idx.items()}
+classes = [idx_to_class[x] for x in classes]
 print(probs)
 print(classes)
-
 labels = [cat_to_name[str(i)] for i in classes]
 
 
